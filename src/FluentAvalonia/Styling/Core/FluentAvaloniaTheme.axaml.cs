@@ -1,13 +1,17 @@
 ﻿using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Styling;
+using Avalonia.Threading;
+using FluentAvalonia.Interop;
 using FluentAvalonia.UI.Media;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace FluentAvalonia.Styling;
@@ -83,7 +87,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
     {
         get => _preferUserAccentColor;
         set
-        { 
+        {
             if(_preferUserAccentColor != value)
             {
                 _preferUserAccentColor = value;
@@ -91,7 +95,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
                 // Unlike PreferSystemTheme, we call this everytime as LoadCustomAccentColor handles
                 // switching between a system and custom color (and back)
                 LoadCustomAccentColor();
-            }            
+            }
         }
     }
 
@@ -131,11 +135,23 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
     /// to get a consistent experience, at the (small) expense of breaking Fluent design principles. If your controls
     /// never use multi-line text, you'll never see the effect of this property.
     /// </remarks>
-    public TextVerticalAlignmentOverride TextVerticalAlignmentOverrideBehavior { get; set; } =
-        TextVerticalAlignmentOverride.EnabledNonWindows;
+    public TextVerticalAlignmentOverride TextVerticalAlignmentOverrideBehavior
+    {
+        get => _textAlignmentOverride;
+        set
+        {
+            if (_textAlignmentOverride != value)
+            {
+                // NOTE: Attempting to downgrade this after startup will not
+                // remove the styles - this still requires an app restart
+                _textAlignmentOverride = value;
+                SetTextAlignmentOverrides();
+            }
+        }
+    }
 
     public AvaloniaList<IResourceDictionary> MergedDictionaries { get; }
-      
+
     bool IResourceNode.HasResources => true;
 
     /// <inheritdoc />
@@ -172,7 +188,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
 
         if (OperatingSystem.IsWindows())
         {
-            // Load this in all cases since with ThemeDictionaries, we always have a ref to the 
+            // Load this in all cases since with ThemeDictionaries, we always have a ref to the
             // HighContrast dictionary
             TryLoadHighContrastThemeColors();
         }
@@ -192,7 +208,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
             _platformSettings = Application.Current.PlatformSettings;
             _platformSettings.ColorValuesChanged += OnPlatformColorValuesChanged;
         }
-                        
+
         if (OperatingSystem.IsWindows())
         {
             theme = ResolveWindowsSystemSettings(_platformSettings);
@@ -213,7 +229,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
             if (PreferSystemTheme)
                 theme = GetThemeFromIPlatformSettings(_platformSettings);
 
-            // MacOS logic is also used for WASM/Mobile since it just pulls from 
+            // MacOS logic is also used for WASM/Mobile since it just pulls from
             // IPlatformSettings Color Values
             TryLoadMacOSAccentColor(_platformSettings);
 
@@ -224,7 +240,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
         if (theme != null)
         {
             Application.Current.RequestedThemeVariant = theme;
-        }     
+        }
     }
 
     private void OnPlatformColorValuesChanged(object sender, PlatformColorValues e)
@@ -391,12 +407,12 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
         // may get messed up b/c of the centered alignment
         var s3 = new Style(x =>
         {
-            return x.OfType<ComboBox>().Template().OfType<ContentControl>().Child().OfType<TextBlock>();
+            return x.OfType<ComboBox>().Template().OfType<ContentPresenter>().Child().OfType<TextBlock>();
         });
         s3.Setters.Add(new Setter(Layoutable.VerticalAlignmentProperty, VerticalAlignment.Center));
         Add(s3);
     }
-       
+
     private void LoadCustomAccentColor()
     {
         if (!_customAccentColor.HasValue)
@@ -406,7 +422,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
                 if (OperatingSystem.IsWindows())
                 {
                     TryLoadWindowsAccentColor();
-                }                
+                }
                 else if (OperatingSystem.IsLinux())
                 {
                     TryLoadLinuxAccentColor();
@@ -434,7 +450,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
             (Color)col.LightenPercent(-0.30f),
             (Color)col.LightenPercent(-0.45f));
     }
-        
+
     private void TryLoadMacOSAccentColor(IPlatformSettings platformSettings)
     {
         try
@@ -552,6 +568,9 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
     private bool _preferUserAccentColor;
     private ResourceDictionary _accentColorsDictionary;
     private IPlatformSettings _platformSettings;
+
+    private TextVerticalAlignmentOverride _textAlignmentOverride =
+        TextVerticalAlignmentOverride.EnabledNonWindows;
 
     public const string LightModeString = "Light";
     public const string DarkModeString = "Dark";
