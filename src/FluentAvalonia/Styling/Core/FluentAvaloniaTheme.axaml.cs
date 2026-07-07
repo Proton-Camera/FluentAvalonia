@@ -193,8 +193,6 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
             TryLoadHighContrastThemeColors();
         }
 
-        SetTextAlignmentOverrides();
-
         _hasLoaded = true;
     }
 
@@ -570,7 +568,7 @@ public partial class FluentAvaloniaTheme : Styles, IResourceProvider
     private IPlatformSettings _platformSettings;
 
     private TextVerticalAlignmentOverride _textAlignmentOverride =
-        TextVerticalAlignmentOverride.EnabledNonWindows;
+        TextVerticalAlignmentOverride.Disabled;
 
     public const string LightModeString = "Light";
     public const string DarkModeString = "Dark";
